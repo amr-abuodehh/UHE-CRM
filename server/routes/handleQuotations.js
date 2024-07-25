@@ -3,6 +3,9 @@ const db = require("../db");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
+const uploadQuotationReceipts = require("../middleware/multerQuotationReceipts");
+const path = require("path");
+const fs = require("fs");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -272,6 +275,100 @@ router.post("/add_payment", (req, res) => {
 
     return res.status(200).json({ message: "Payment added successfully" });
   });
+});
+
+router.post(
+  "/upload_receipt",
+  uploadQuotationReceipts.single("file"),
+  (req, res) => {
+    const { quotationId } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Check if the file already exists
+    const checkFileQuery =
+      "SELECT * FROM quotation_files WHERE quotation_id = ? AND file_name = ?";
+
+    db.query(
+      checkFileQuery,
+      [quotationId, file.originalname],
+      (err, results) => {
+        if (err) {
+          console.error("Error checking for existing file:", err);
+          return res.status(500).json({ message: "Database error" });
+        }
+
+        if (results.length > 0) {
+          return res.status(400).json({ message: "File already exists" });
+        }
+
+        // File does not exist, proceed with insertion
+        const insertQuery =
+          "INSERT INTO quotation_files(quotation_id, file_name, file_url) VALUES(?, ?, ?)";
+
+        db.query(
+          insertQuery,
+          [quotationId, file.originalname, file.path],
+          (err, results) => {
+            if (err) {
+              console.error("Error uploading file:", err);
+              return res.status(500).json({ message: "Database Error" });
+            }
+            return res.status(200).json({
+              message: `Receipt Uploaded Successfully for quotation ${quotationId}`,
+            });
+          }
+        );
+      }
+    );
+  }
+);
+
+router.get("/fetch_files/:quotationId", (req, res) => {
+  const { quotationId } = req.params;
+
+  const query = "SELECT * FROM quotation_files WHERE quotation_id = ?";
+
+  db.query(query, [quotationId], (err, results) => {
+    if (err) {
+      console.error("Error fetching files:", err);
+      return res.status(500).json({ message: "Database Error" });
+    }
+
+    res.status(200).json({ files: results });
+  });
+});
+
+router.delete("/delete_files/:id/:file_url", (req, res) => {
+  const { id } = req.params;
+  const file_url = decodeURIComponent(req.params.file_url);
+  const filePath = file_url;
+
+  const query = "DELETE FROM quotation_files WHERE id=?";
+  try {
+    db.query(query, [id], (err, result) => {
+      if (err) {
+        console.error("couldn't delete file from database", err);
+        return res.status(500).json({ message: "database error" });
+      }
+
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("couldn't delete file from filesystem", err);
+          return res.status(500).json({ message: "file system error" });
+        }
+        return res.status(200).json({
+          message: `File with id: ${id} successfully deleted`,
+        });
+      });
+    });
+  } catch (error) {
+    console.error("couldn't delete file", error);
+    return res.status(500).json({ message: "database error" });
+  }
 });
 
 module.exports = router;

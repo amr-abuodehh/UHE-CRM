@@ -6,3 +6,34 @@
   z-index: 1040; /* Ensure backdrop is behind modal but above other content */
   background-color: rgba(0, 0, 0, 0.5); /* Dims the background */
 }
+.fileList {
+  list-style: none;
+  padding: 0;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fileLink {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.deleteButton {
+  background-color: #ff4d4d;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.deleteButton:hover {
+  background-color: #ff1a1a;
+}

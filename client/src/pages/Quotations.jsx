@@ -11,6 +11,8 @@ import NewQuotationItem from "./NewQuotationItem";
 import QuotationReceipt from "./QuotationReceipt";
 import FormModal from "../componenets/FormModal";
 import { paymentFormConfig } from '../config/formconfig'
+import UploadQuotationFiles from '../componenets/UploadQuotationFiles'
+import UploadModal from "../componenets/UploadModal";
 
 
 
@@ -18,6 +20,7 @@ export default function Orders() {
     const { accessToken } = useAuth();
     const [newItemMode, setNewItemMode] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
+    const [showFiles, setShowFiles] = useState(false);
     const [paymentModal, setPaymentModal] = useState(false);
     const [selectedQuotation, setSelectedQuotation] = useState("")
     const [paymentFormData, setPaymentFormData] = useState({ amount_payed: '' });
@@ -111,6 +114,10 @@ export default function Orders() {
         setSelectedQuotation(id);
         setPaymentModal(true);
     }, []);
+    const viewFiles = useCallback((id) => {
+        setSelectedQuotation(id);
+        setShowFiles(true);
+    }, [])
 
     const handlePaymentInput = useCallback((name, value) => {
         setPaymentFormData({ ...paymentFormData, [name]: value });
@@ -179,6 +186,7 @@ export default function Orders() {
                         <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addNewItem(row.original.id)}>Add New Item</button>
                         <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addPayment(row.original.id)}>Add Payment</button>
                         <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewReceipt(row.original.id)}>View Receipt</button>
+                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewFiles(row.original.id)}>Upload Files</button>
                     </>
                 )}
                 {row.original.status === 'canceled' && (
@@ -192,7 +200,7 @@ export default function Orders() {
 
             </div>
         )
-    }], [cancelQuotation, addNewItem, viewReceipt, deleteQuotation, addPayment]);
+    }], [cancelQuotation, addNewItem, viewReceipt, deleteQuotation, addPayment, viewFiles]);
 
     const data = useMemo(() => quotations, [quotations]);
 
@@ -230,6 +238,9 @@ export default function Orders() {
                         handleInput={handlePaymentInput}
                         handleSubmit={handlePaymentSubmit}
                     />
+                )}
+                {showFiles && (
+                    <UploadQuotationFiles isOpen={UploadModal} onClose={() => setShowFiles(false)} quotationId={selectedQuotation} />
                 )}
 
             </div>

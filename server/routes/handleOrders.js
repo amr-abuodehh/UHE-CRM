@@ -3,6 +3,9 @@ const db = require("../db");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
+const uploadOrderReceipts = require("../middleware/multerOrderReceipts");
+const path = require("path");
+const fs = require("fs");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -257,6 +260,95 @@ router.post("/add_payment", (req, res) => {
 
     return res.status(200).json({ message: "Payment added successfully" });
   });
+});
+router.post(
+  "/upload_receipt",
+  uploadOrderReceipts.single("file"),
+  (req, res) => {
+    const { orderId } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Check if the file already exists
+    const checkFileQuery =
+      "SELECT * FROM order_files WHERE order_id = ? AND file_name = ?";
+
+    db.query(checkFileQuery, [orderId, file.originalname], (err, results) => {
+      if (err) {
+        console.error("Error checking for existing file:", err);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      if (results.length > 0) {
+        return res.status(400).json({ message: "File already exists" });
+      }
+
+      // File does not exist, proceed with insertion
+      const insertQuery =
+        "INSERT INTO order_files(order_id, file_name, file_url) VALUES(?, ?, ?)";
+
+      db.query(
+        insertQuery,
+        [orderId, file.originalname, file.path],
+        (err, results) => {
+          if (err) {
+            console.error("Error uploading file:", err);
+            return res.status(500).json({ message: "Database Error" });
+          }
+          return res.status(200).json({
+            message: `Receipt Uploaded Successfully for order ${orderId}`,
+          });
+        }
+      );
+    });
+  }
+);
+
+router.get("/fetch_files/:orderId", (req, res) => {
+  const { orderId } = req.params;
+
+  const query = "SELECT * FROM order_files WHERE order_id = ?";
+
+  db.query(query, [orderId], (err, results) => {
+    if (err) {
+      console.error("Error fetching files:", err);
+      return res.status(500).json({ message: "Database Error" });
+    }
+
+    res.status(200).json({ files: results });
+  });
+});
+
+router.delete("/delete_files/:id/:file_url", (req, res) => {
+  const { id } = req.params;
+  const file_url = decodeURIComponent(req.params.file_url);
+  const filePath = file_url;
+
+  const query = "DELETE FROM order_files WHERE id=?";
+  try {
+    db.query(query, [id], (err, result) => {
+      if (err) {
+        console.error("couldn't delete file from database", err);
+        return res.status(500).json({ message: "database error" });
+      }
+
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("couldn't delete file from filesystem", err);
+          return res.status(500).json({ message: "file system error" });
+        }
+        return res.status(200).json({
+          message: `File with id: ${id} successfully deleted`,
+        });
+      });
+    });
+  } catch (error) {
+    console.error("couldn't delete file", error);
+    return res.status(500).json({ message: "database error" });
+  }
 });
 
 module.exports = router;

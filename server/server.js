@@ -11,17 +11,19 @@ const tasksRoute = require("./routes/handleTasks");
 const hrRoute = require("./routes/handleHr");
 const OrderRoute = require("./routes/handleOrders");
 const cookieParser = require("cookie-parser");
+const path = require("path");
 const jwt = require("jsonwebtoken");
 const {
   authenticateToken,
   authorizeAdmin,
   authorizeAdminOrManager,
-} = require("./authMiddleware");
+} = require("./middleware/authMiddleware");
 
 app.use(cookieParser());
 
 app.use(express.json());
 app.use(cors());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/suppliers", authenticateToken, suppliersRoute);
 app.use("/api/users", usersRoute);

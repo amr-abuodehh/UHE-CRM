@@ -9,7 +9,7 @@ const {
   authenticateToken,
   authorizeAdmin,
   authorizeAdminOrManager,
-} = require("../authMiddleware");
+} = require("../middleware/authMiddleware");
 
 router.post("/token", (req, res) => {
   const refreshToken = req.cookies.refreshToken;
