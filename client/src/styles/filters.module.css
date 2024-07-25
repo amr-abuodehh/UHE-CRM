@@ -1,0 +1,43 @@
+/* filters.module.css */
+
+.filtercontainer {
+  background-color: rgb(43, 48, 53);
+  padding: 15px; /* Padding around the entire container */
+  border-radius: 10px; /* Rounded corners */
+  display: flex;
+  align-items: center;
+}
+
+.filtercontainer span {
+  display: flex;
+  align-items: center;
+}
+
+.filtercontainer span:not(:last-child) {
+  margin-right: 20px; /* Spacing between each span */
+}
+
+.filtercontainer label {
+  color: white;
+  margin-right: 10px; /* Space between label and input/select */
+  min-width: 80px; /* Minimum width for labels */
+  text-align: right; /* Align labels to the right */
+}
+
+.filtercontainer input[type="text"],
+.filtercontainer select,
+.filtercontainer input[type="date"] {
+  padding: 10px; /* Padding inside input/select */
+  border: 1px solid #ccc; /* Light gray border */
+  border-radius: 13px; /* Rounded corners */
+  font-size: 14px; /* Font size */
+  outline: none; /* Remove outline */
+}
+
+.filtercontainer input[type="date"] {
+  width: 150px; /* Adjust width for date inputs */
+}
+
+.filtercontainer select {
+  min-width: 120px; /* Minimum width for select */
+}

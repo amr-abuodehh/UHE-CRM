@@ -1,0 +1,46 @@
+/* styles/table.css */
+
+table {
+  font-family: Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow for a modern look */
+  border-radius: 10px; /* Rounded corners for table */
+}
+
+table th,
+table td {
+  border: 1px solid #ddd;
+  padding: 12px; /* Increase padding for better spacing */
+  text-align: center;
+}
+
+table th {
+  background-color: rgb(33, 37, 41);
+  color: white;
+  font-weight: bold;
+}
+
+table tbody tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+table tbody tr:hover {
+  background-color: #ddd;
+}
+
+/* Optional: Make table header sticky */
+table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  background-color: rgb(43, 48, 53);
+}
+
+/* Optional: Style for odd rows */
+table tbody tr:nth-child(odd) {
+  background-color: #ffffff; /* White background for odd rows */
+}

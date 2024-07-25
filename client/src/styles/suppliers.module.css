@@ -1,0 +1,76 @@
+.page {
+  background-color: #f7f7f7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.header {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.content {
+  width: 100%;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.actionsContainer {
+  display: flex;
+  gap: 10px;
+}
+
+.actionButton {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.actionButton:hover {
+  background-color: #e0e0e0;
+}
+
+.actionButton.delete {
+  background-color: #ff4d4d;
+  color: #fff;
+}
+
+.actionButton.update {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.actionButton.payment {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.pagination button {
+  border: none;
+  background-color: #007bff;
+  color: #fff;
+  padding: 10px 15px;
+  margin: 0 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.pagination button:hover {
+  background-color: #0056b3;
+}

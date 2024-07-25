@@ -1,0 +1,8 @@
+.customModal .modal-dialog {
+  z-index: 1050; /* Ensure modal is on top of everything */
+}
+
+.customModal .modal-backdrop {
+  z-index: 1040; /* Ensure backdrop is behind modal but above other content */
+  background-color: rgba(0, 0, 0, 0.5); /* Dims the background */
+}

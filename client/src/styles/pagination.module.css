@@ -1,0 +1,46 @@
+.pagination-container {
+  display: flex;
+  align-items: center;
+  color: white;
+
+  padding: 10px;
+  background-color: rgb(43, 48, 53);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-container span {
+  margin-right: 15px;
+  font-size: 14px;
+}
+
+.pagination-container input[type="number"],
+.pagination-container select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  outline: none;
+  width: 100px;
+}
+
+.pagination-container select {
+  min-width: 80px;
+}
+
+.pagination-container button {
+  padding: 8px 12px;
+  margin-left: 5px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pagination-container button:disabled {
+  background-color: #ddd;
+  color: #999;
+  cursor: not-allowed;
+}
