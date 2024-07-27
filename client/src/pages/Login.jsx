@@ -1,46 +1,63 @@
-import styles from '../styles/forms.module.css';
-import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { loginFormConfig } from '../config/formconfig'
-import Form from '../componenets/Form';
-
-
-
+import styles from '../styles/login.module.css';
 
 export default function Login() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ username: "", password: "" });
     const { login } = useAuth();
 
-    const handleInput = (name, value) => {
-
+    const handleInput = (e) => {
+        const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await login(formData)
-        }
-
-        catch (error) {
+            await login(formData);
+            navigate('/homepage');
+        } catch (error) {
             console.error("Login error:", error);
         }
-        navigate('/Register')
-
     };
 
     return (
         <div className={styles.formBackground}>
-            <div className={`container-fluid ${styles.customContainer}`}>
-                <h2>Login</h2>
-                <Form
-                    config={loginFormConfig}
-                    formData={formData}
-                    handleInput={handleInput}
-                />
-                <button type="submit" className="btn btn-primary" onClick={handleSubmit}>Submit</button>
+            <div className={styles.welcomeContainer}>
+                <h1 className={styles.welcomeTitle}>Welcome</h1>
+
+            </div>
+            <div className={styles.loginContainer}>
+                <h2 className={styles.title}>Login</h2>
+                <form onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.inputGroup}>
+                        <label htmlFor="username">Username</label>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            value={formData.username}
+                            onChange={handleInput}
+                            className={styles.inputField}
+                            required
+                        />
+                    </div>
+                    <div className={styles.inputGroup}>
+                        <label htmlFor="password">Password</label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInput}
+                            className={styles.inputField}
+                            required
+                        />
+                    </div>
+                    <button type="submit" className={styles.loginButton}>Submit</button>
+                </form>
             </div>
         </div>
     );
