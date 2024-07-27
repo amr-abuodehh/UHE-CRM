@@ -5,7 +5,7 @@ import TableBody from '../componenets/Tablebody';
 import Pagination from '../componenets/Pagination';
 import { useTable, useGlobalFilter, usePagination } from 'react-table';
 import { useAuth } from "../AuthContext";
-import styles from "../styles/suppliers.module.css"
+import styles from "../styles/pages.module.css"
 import { toast } from 'react-toastify';
 import { orderColumns } from '../config/ordercolumns'
 import NewOrderItem from "./NewOrderItem";
@@ -225,8 +225,8 @@ export default function Orders() {
             <header className={styles.header}>Supplier Orders</header>
             <div className={styles.content}>
                 <Globalfilter filters={filters} setFilters={setFilters} showLocationFilter={false} />
-                <TableBody tableInstance={tableInstance} className={styles.table} />
-                <Pagination tableInstance={tableInstance} className={styles.pagination} />
+                <TableBody tableInstance={tableInstance} />
+                <Pagination tableInstance={tableInstance} />
                 {showReceipt && (
                     <OrderReceipt selectedOrder={selectedOrder} setShowReceipt={setShowReceipt} />
                 )}

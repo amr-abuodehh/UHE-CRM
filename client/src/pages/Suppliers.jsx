@@ -1,11 +1,10 @@
 import { suppliercols } from '../config/suppliercolumns';
-import styles from '../styles/suppliers.module.css';
+import styles from '../styles/pages.module.css';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTable, useGlobalFilter, usePagination } from 'react-table';
 import { Globalfilter } from '../componenets/Globalfilter';
 import TableBody from '../componenets/Tablebody';
 import CreateSupplier from '../pages/CreateSupplier';
-
 import Pagination from '../componenets/Pagination';
 import { useAuth } from '../AuthContext';
 import { toast } from 'react-toastify';
@@ -173,8 +172,8 @@ export default function Suppliers() {
             <header className={styles.header}>Suppliers</header>
             <div className={styles.content}>
                 <Globalfilter filters={filters} setFilters={setFilters} />
-                <TableBody tableInstance={tableInstance} className={styles.table} />
-                <Pagination tableInstance={tableInstance} className={styles.pagination} />
+                <TableBody tableInstance={tableInstance} />
+                <Pagination tableInstance={tableInstance} />
 
             </div>
         </div>

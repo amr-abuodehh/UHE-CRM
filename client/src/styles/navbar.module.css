@@ -1,0 +1,38 @@
+.navLink {
+  display: flex;
+  align-items: center;
+  color: #ff007f;
+  margin-right: 15px;
+  position: relative;
+  padding-right: 15px;
+}
+
+.navLink::after {
+  content: "|";
+  color: #ccc;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.navDropdown .nav-link {
+  display: flex;
+  align-items: center;
+}
+
+.navIcon {
+  margin-right: 8px;
+}
+
+.navDropdown .dropdown-menu {
+  background-color: #1e1e1e;
+}
+
+.navDropdown .dropdown-item {
+  color: #ff007f;
+}
+
+.navDropdown .dropdown-item:hover {
+  background-color: #333;
+}

@@ -3,13 +3,14 @@
   flex-direction: column;
   align-items: center;
   padding: 20px;
-  background-color: #f0f4f8;
+  background: url("../assets/images/Background.png") no-repeat center
+    center/cover;
   min-height: 100vh;
 }
 
 .welcomeMessage {
   font-size: 2.5rem;
-  color: #333;
+  color: #eb1362; /* Pink color for the welcome message */
   margin-bottom: 20px;
 }
 
@@ -21,9 +22,9 @@
 }
 
 .card {
-  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   padding: 20px;
   width: 250px;
   text-align: center;
@@ -32,13 +33,13 @@
 
 .card h2 {
   font-size: 1.5rem;
-  color: #333;
+  color: #eb1362; /* Pink color for headings */
   margin-bottom: 10px;
 }
 
 .card p {
   font-size: 2rem;
-  color: #007bff;
+  color: #10131d; /* Blue color for numbers */
 }
 
 .card:hover {

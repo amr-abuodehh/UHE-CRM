@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import styles from '../styles/login.module.css';
+import logo from '../assets/images/logo.png'; // Import the logo image
 
 export default function Login() {
     const navigate = useNavigate();
@@ -25,9 +26,8 @@ export default function Login() {
 
     return (
         <div className={styles.formBackground}>
-            <div className={styles.welcomeContainer}>
-                <h1 className={styles.welcomeTitle}>Welcome</h1>
-
+            <div className={styles.logoContainer}>
+                <img src={logo} alt="Logo" className={styles.logo} />
             </div>
             <div className={styles.loginContainer}>
                 <h2 className={styles.title}>Login</h2>
@@ -56,7 +56,7 @@ export default function Login() {
                             required
                         />
                     </div>
-                    <button type="submit" className={styles.loginButton}>Submit</button>
+                    <button type="submit" className={styles.loginButton}>Log In</button>
                 </form>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import { leaveFormColumns } from '../config/leaveformcolumns';
-import styles from '../styles/suppliers.module.css';
+import styles from '../styles/pages.module.css';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTable, useGlobalFilter, usePagination } from 'react-table';
 import { Globalfilter } from '../componenets/Globalfilter';
@@ -139,8 +139,8 @@ export default function LeaveForms() {
             <header className={styles.header}>Leave Forms</header>
             <div className={styles.content}>
                 <Globalfilter filters={filters} setFilters={setFilters} showLocationFilter={false} />
-                <TableBody tableInstance={tableInstance} className={styles.table} />
-                <Pagination tableInstance={tableInstance} className={styles.pagination} />
+                <TableBody tableInstance={tableInstance} />
+                <Pagination tableInstance={tableInstance} />
 
             </div>
         </div>

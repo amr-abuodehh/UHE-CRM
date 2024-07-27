@@ -1,0 +1,68 @@
+/* pages.module.css */
+
+/* General page styling */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.header {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Actions column styling */
+.actionsContainer {
+  display: flex;
+  gap: 10px;
+}
+
+.actionButton {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Delete button styling */
+.delete {
+  background-color: #dc3545; /* Bootstrap red */
+  color: white;
+}
+
+.delete:hover {
+  background-color: #c82333;
+}
+
+/* Update button styling */
+.update {
+  background-color: #007bff; /* Bootstrap blue */
+  color: white;
+}
+
+.update:hover {
+  background-color: #0056b3;
+}
+
+/* New Order button styling */
+.payment {
+  background-color: #28a745; /* Bootstrap green */
+  color: white;
+}
+
+.payment:hover {
+  background-color: #218838;
+}

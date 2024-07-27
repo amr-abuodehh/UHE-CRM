@@ -4,7 +4,7 @@ import TableBody from '../componenets/Tablebody';
 import Pagination from '../componenets/Pagination';
 import { useTable, useGlobalFilter, usePagination } from 'react-table';
 import { useAuth } from "../AuthContext";
-import styles from "../styles/suppliers.module.css"
+import styles from "../styles/pages.module.css"
 import { toast } from 'react-toastify';
 import { quotationColumns } from '../config/quotationscolumns'
 import NewQuotationItem from "./NewQuotationItem";
@@ -223,8 +223,8 @@ export default function Orders() {
             <header className={styles.header}>Quotations</header>
             <div className={styles.content}>
                 <Globalfilter filters={filters} setFilters={setFilters} showLocationFilter={false} />
-                <TableBody tableInstance={tableInstance} className={styles.table} />
-                <Pagination tableInstance={tableInstance} className={styles.pagination} />
+                <TableBody tableInstance={tableInstance} />
+                <Pagination tableInstance={tableInstance} />
                 {showReceipt && (
                     <QuotationReceipt selectedQuotation={selectedQuotation} setShowReceipt={setShowReceipt} />
                 )}
