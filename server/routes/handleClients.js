@@ -35,9 +35,7 @@ router.post("/create", (req, res) => {
       console.error("error executing query", err);
       return res.status(500).json({ message: "Database error", error: err });
     }
-    return res
-      .status(201)
-      .json({ message: "successfully added client", data: results });
+    return res.status(201).json({ message: "successfully added client" });
   });
 });
 

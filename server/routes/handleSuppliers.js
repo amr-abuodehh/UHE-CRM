@@ -45,9 +45,7 @@ router.post("/create", (req, res) => {
       console.error("error executing query", err);
       return res.status(500).json({ message: "database error", error: err });
     }
-    return res
-      .status(201)
-      .json({ message: "successfully added supplier", data: results });
+    return res.status(201).json({ message: "successfully added supplier" });
   });
 });
 
@@ -156,11 +154,9 @@ router.delete("/delete/:id", (req, res) => {
                   .json({ message: "Database Error", error: err });
               }
 
-              return res
-                .status(200)
-                .json({
-                  message: `Supplier with ID ${id} deleted successfully`,
-                });
+              return res.status(200).json({
+                message: `Supplier with ID ${id} deleted successfully`,
+              });
             });
           });
         });
