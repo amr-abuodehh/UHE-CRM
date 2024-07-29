@@ -33,7 +33,12 @@ app.use("/api/quotations", authenticateToken, quotationsRoute);
 app.use("/api/hr", authenticateToken, hrRoute);
 app.use("/api/tasks", authenticateToken, tasksRoute);
 app.use("/api/orders", authenticateToken, OrderRoute);
-app.use("/api/home", homeRoute);
+app.use("/api/home", authenticateToken, homeRoute);
+
+app.use(express.static(path.join(__dirname, "build")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
