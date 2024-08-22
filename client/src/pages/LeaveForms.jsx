@@ -105,7 +105,7 @@ export default function LeaveForms() {
                 Header: 'Actions',
                 Cell: ({ row }) => (
                     <div className={styles.actionsContainer}>
-                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteForm(row.original.id)}>Delete</button>
+                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteForm(row.original.ref_number)}>Delete</button>
                         <button className={`${styles.actionButton} ${styles.update}`} onClick={() => updateForm(row.original)}>Update</button>
                     </div>
                 )

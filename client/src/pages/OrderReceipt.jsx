@@ -15,6 +15,7 @@ export default function OrderReceipt({ selectedOrder, setShowReceipt }) {
     const fetchItems = useCallback(async () => {
         try {
             setLoading(true);
+
             const response = await fetch(`/api/orders/fetch_items/${selectedOrder}`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,

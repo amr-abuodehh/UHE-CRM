@@ -28,7 +28,7 @@ const UploadModal = ({ isOpen, onClose, uploadedFiles, onFileChange, onFileUploa
                                 </a>
                                 <button
                                     className={styles.deleteButton}
-                                    onClick={() => handleDelete(file.id, file.file_url)}
+                                    onClick={() => handleDelete(file.file_name, file.file_url)}
                                 >
                                     X
                                 </button>

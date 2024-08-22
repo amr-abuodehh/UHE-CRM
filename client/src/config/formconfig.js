@@ -137,7 +137,7 @@ export const paymentFormConfig = [
   {
     type: "number",
     label: "Payment Amount",
-    name: "amount_payed",
+    name: "amount_paid",
     required: true,
   },
 ];

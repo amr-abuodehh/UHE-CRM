@@ -33,7 +33,7 @@ export default function CreateClients({ selectedClient, setUpdateMode }) {
             let endpoint = '/api/clients/create';
             let method = 'POST';
             if (selectedClient) {
-                endpoint = `/api/clients/update/${selectedClient.id}`;
+                endpoint = `/api/clients/update/${selectedClient.ref_number}`;
                 method = "PUT";
             }
 

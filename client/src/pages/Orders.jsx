@@ -128,13 +128,18 @@ export default function Orders() {
     const handlePaymentSubmit = useCallback(async (e) => {
         e.preventDefault();
         try {
+            const { amount_paid } = paymentFormData; // Ensure this matches the form field name
+
             const response = await fetch(`/api/orders/add_payment`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`
                 },
-                body: JSON.stringify({ orderId: selectedOrder, ...paymentFormData })
+                body: JSON.stringify({
+                    order_ref_number: selectedOrder, // Use the appropriate field name for orders
+                    amount_paid: Number(amount_paid), // Convert to number
+                })
             });
 
             if (!response.ok) {
@@ -144,12 +149,13 @@ export default function Orders() {
             const data = await response.json();
             toast.success(data.message);
             setPaymentModal(false);
-            fetchOrders();
+            fetchOrders(); // Ensure this function refreshes the list of orders
         } catch (error) {
             console.error('Error adding payment:', error);
             toast.error('Failed to add payment');
         }
     }, [selectedOrder, paymentFormData, accessToken, fetchOrders]);
+
 
 
 
@@ -184,16 +190,16 @@ export default function Orders() {
             <div className={styles.actionsContainer}>
                 {row.original.status !== 'canceled' && (
                     <>
-                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => cancelOrder(row.original.id)}>Cancel</button>
-                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addNewItem(row.original.id)}>Add New Item</button>
-                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addPayment(row.original.id)}>Add Payment</button>
-                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewReceipt(row.original.id)}>View Items</button>
-                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewFiles(row.original.id)}>Upload Files</button>
+                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => cancelOrder(row.original.ref_number)}>Cancel</button>
+                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addNewItem(row.original.ref_number)}>Add New Item</button>
+                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addPayment(row.original.ref_number)}>Add Payment</button>
+                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewReceipt(row.original.ref_number)}>View Items</button>
+                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewFiles(row.original.ref_number)}>Upload Files</button>
                     </>
                 )}
                 {row.original.status === 'canceled' && (
                     <>
-                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteOrder(row.original.id)}>Delete</button>
+                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteOrder(row.original.ref_number)}>Delete</button>
                     </>
                 )}
 

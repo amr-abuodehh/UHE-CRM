@@ -1,7 +1,7 @@
 export const quotationColumns = [
   {
     Header: "Quotation Number",
-    accessor: "quotation_number",
+    accessor: "ref_number",
   },
   {
     Header: "Client ",

@@ -3,115 +3,170 @@ const db = require("../db");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
+const { getMongoDB } = require("../db");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const router = express.Router();
+const getNextSequence = async (db, name) => {
+  try {
+    let result = await db.collection("sequences").findOne({ _id: name });
 
-router.post("/create", (req, res) => {
+    if (!result) {
+      await db.collection("sequences").insertOne({ _id: name, seq: 1 });
+      result = await db.collection("sequences").findOne({ _id: name });
+    }
+    await db
+      .collection("sequences")
+      .updateOne({ _id: name }, { $inc: { seq: 1 } });
+    const updatedResult = await db
+      .collection("sequences")
+      .findOne({ _id: name });
+
+    if (updatedResult && typeof updatedResult.seq === "number") {
+      return updatedResult.seq;
+    } else {
+      throw new Error(
+        `Failed to retrieve sequence for ${name}. Result is ${JSON.stringify(
+          updatedResult
+        )}`
+      );
+    }
+  } catch (error) {
+    console.error("Error in getNextSequence:", error);
+    throw error;
+  }
+};
+
+router.post("/create", async (req, res) => {
   const { task, details, client, deadline, assigned_to } = req.body;
   const username = req.headers["username"];
+
   try {
-    const query =
-      "INSERT INTO tasks(task,details,deadline,assigned_to,client,created_by) VALUES(?,?,?,?,?,?)";
-    const values = [task, details, deadline, assigned_to, client, username];
-    db.query(query, values, (err, results) => {
-      if (err) {
-        console.log("error creating new task", err);
-        return res.status(500).json({ message: "Database Error", error: err });
-      }
+    const db = getMongoDB();
+    const tasksCollection = db.collection("tasks");
+
+    // Generate a new ref_number using the sequence function
+    const ref_number = await getNextSequence(db, "tasks");
+
+    // Create the task document
+    const newTask = {
+      ref_number, // Generated sequence number
+      task,
+      details,
+      deadline,
+      assigned_to,
+      client,
+      created_by: username,
+      status: "pending", // Default value
+      employee_comments: "", // Default value
+      created_at: new Date(), // Optionally add a created_at timestamp
+    };
+
+    // Insert the new task into the collection
+    const result = await tasksCollection.insertOne(newTask);
+
+    if (result) {
       return res.status(200).json({ message: "New task Created Successfully" });
-    });
+    } else {
+      return res.status(500).json({ message: "Failed to create new task" });
+    }
   } catch (error) {
-    console.error("error creating new task");
-    return res.status(500).json({ message: "Database Error", error: error });
+    console.error("Error creating new task:", error);
+    return res
+      .status(500)
+      .json({ message: "Database Error", error: error.message });
   }
 });
-router.get("/fetch", (req, res) => {
+
+router.get("/fetch", async (req, res) => {
   try {
     const { location, startDate, endDate } = req.query;
-    let query = "SELECT * FROM tasks WHERE 1=1";
     const user = JSON.parse(req.headers["user"]);
-    const queryParams = [];
+
+    const db = getMongoDB();
+    const tasksCollection = db.collection("tasks");
+
+    // Build the query object
+    const query = {};
 
     if (location) {
-      query += " AND location=?";
-      queryParams.push(location);
+      query.location = location;
     }
 
     if (startDate && endDate) {
-      const formattedStartDate = dayjs(startDate).format("YYYY-MM-DD");
-      const formattedEndDate = dayjs(endDate).format("YYYY-MM-DD");
-      query += " AND date_created BETWEEN ? AND ?";
-      queryParams.push(formattedStartDate, formattedEndDate);
+      const formattedStartDate = new Date(startDate);
+      const formattedEndDate = new Date(endDate);
+      query.date_created = { $gte: formattedStartDate, $lte: formattedEndDate };
     } else if (startDate) {
-      const formattedStartDate = dayjs(startDate).format("YYYY-MM-DD");
-      query += " AND date_created >= ?";
-      queryParams.push(formattedStartDate);
+      const formattedStartDate = new Date(startDate);
+      query.date_created = { $gte: formattedStartDate };
     } else if (endDate) {
-      const formattedEndDate = dayjs(endDate).format("YYYY-MM-DD");
-      query += " AND date_created <= ?";
-      queryParams.push(formattedEndDate);
+      const formattedEndDate = new Date(endDate);
+      query.date_created = { $lte: formattedEndDate };
     }
 
     if (user.privilege !== "admin" && user.privilege !== "manager") {
-      query += " AND assigned_to=?";
-      queryParams.push(user.username);
+      query.assigned_to = user.username;
     }
 
-    db.query(query, queryParams, (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.status(500).json({ message: "Database error", error: err });
-      }
+    // Fetch tasks from MongoDB
+    const results = await tasksCollection.find(query).toArray();
 
-      const convertedResults = results.map((task) => {
-        const dateCreated = dayjs
+    // Convert dates to the desired format
+    const convertedResults = results.map((task) => {
+      return {
+        ...task,
+        date_created: dayjs
           .utc(task.date_created)
           .tz("Asia/Dubai")
-          .format("YYYY-MM-DD");
-        const deadline = dayjs
+          .format("YYYY-MM-DD"),
+        deadline: dayjs
           .utc(task.deadline)
           .tz("Asia/Dubai")
-          .format("YYYY-MM-DD");
-        return {
-          ...task,
-          date_created: dateCreated,
-          deadline: deadline,
-        };
-      });
-
-      res.status(200).json(convertedResults);
+          .format("YYYY-MM-DD"),
+      };
     });
+
+    res.status(200).json(convertedResults);
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-router.delete("/delete/:id", (req, res) => {
+router.delete("/delete/:id", async (req, res) => {
   const { id } = req.params;
+  const refNumber = parseInt(id, 10); // Ensure id is a number
+
   try {
-    const query = "DELETE FROM tasks WHERE id=?";
-    db.query(query, [id], (err, results) => {
-      if (err) {
-        console.error("error deleting task", err);
-        return res.status(500).json({ message: "Database Error", error: err });
-      }
-      return res
-        .status(201)
-        .json({ message: `Task with ID: ${id} Deleted successfully` });
-    });
+    const db = getMongoDB();
+    const tasksCollection = db.collection("tasks");
+
+    // Delete the task document
+    const result = await tasksCollection.deleteOne({ ref_number: refNumber });
+
+    if (result.deletedCount === 1) {
+      return res.status(200).json({
+        message: `Task with ref_number ${refNumber} deleted successfully`,
+      });
+    } else {
+      console.log("Deletion failed. Result:", result);
+      return res.status(404).json({
+        message: `Task with ref_number ${refNumber} not found`,
+      });
+    }
   } catch (error) {
-    console.error("error deleting task", error);
-    return res
-      .status(500)
-      .json({ message: "Database error", error: error.message });
+    console.error("Error deleting task:", error);
+    return res.status(500).json({
+      message: "Database Error",
+      error: error.message,
+    });
   }
 });
 
-router.put("/update/:id", (req, res) => {
+router.put("/update/:id", async (req, res) => {
   const {
     task,
     client,
@@ -122,31 +177,43 @@ router.put("/update/:id", (req, res) => {
     status,
   } = req.body;
   const { id } = req.params;
-  const query =
-    "UPDATE tasks SET task=?, client=?, details=?, assigned_to=?, employee_comments=?, status=?, deadline=? WHERE id=?";
-  const values = [
-    task,
-    client,
-    details,
-    assigned_to,
-    employee_comments,
-    status,
-    deadline,
-    id,
-  ];
+  const refNumber = parseInt(id, 10); // Ensure id is a number
+
   try {
-    db.query(query, values, (err, results) => {
-      if (err) {
-        console.error("error updating task", err);
-        return res.status(500).json({ message: "database error", error: err });
+    const db = getMongoDB();
+    const tasksCollection = db.collection("tasks");
+
+    // Update the task document
+    const result = await tasksCollection.updateOne(
+      { ref_number: refNumber }, // Match by ref_number
+      {
+        $set: {
+          task: task || "", // Default to empty string if not provided
+          client: client || "", // Default to empty string if not provided
+          details: details || "", // Default to empty string if not provided
+          assigned_to: assigned_to || "", // Default to empty string if not provided
+          employee_comments: employee_comments || "", // Default to empty string if not provided
+          status: status || "pending", // Default to "pending" if not provided
+          deadline: deadline || null, // Default to null if not provided
+        },
       }
-      return res
-        .status(200)
-        .json({ message: `Task with ID:${id} Successfully Updated` });
-    });
+    );
+
+    if (result.matchedCount === 1) {
+      return res.status(200).json({
+        message: `Task with ref_number:${refNumber} successfully updated`,
+      });
+    } else {
+      return res.status(404).json({
+        message: `Task with ref_number:${refNumber} not found`,
+      });
+    }
   } catch (error) {
-    console.error("error updating task", error);
-    return res.status(500).json({ message: "Database Error", error });
+    console.error("Error updating task:", error);
+    return res.status(500).json({
+      message: "Database Error",
+      error: error.message,
+    });
   }
 });
 

@@ -5,282 +5,315 @@ const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
 const uploadQuotationReceipts = require("../middleware/multerQuotationReceipts");
 const path = require("path");
+const { getMongoDB } = require("../db");
 const fs = require("fs");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const router = express.Router();
+const getNextSequence = async (db, name) => {
+  try {
+    let result = await db.collection("sequences").findOne({ _id: name });
 
-router.post("/create_quotation", (req, res) => {
-  const { client_id, client_name, created_by } = req.body;
+    if (!result) {
+      await db.collection("sequences").insertOne({ _id: name, seq: 1 });
+      result = await db.collection("sequences").findOne({ _id: name });
+    }
+    await db
+      .collection("sequences")
+      .updateOne({ _id: name }, { $inc: { seq: 1 } });
+    const updatedResult = await db
+      .collection("sequences")
+      .findOne({ _id: name });
 
-  const insertQuery =
-    "INSERT INTO quotations (client_id, client_name, created_by, quotation_number, date_created, status) VALUES (?, ?, ?, ?, CURDATE(), ?)";
-
-  db.query(
-    insertQuery,
-    [client_id, client_name, created_by, 0, "pending"],
-    (err, result) => {
-      if (err) {
-        console.error("Error inserting new quotation:", err);
-        return res
-          .status(500)
-          .send({ message: "Error inserting new quotation" });
-      }
-
-      const quotationId = result.insertId;
-      const quotationNumber = `ON.${quotationId}`;
-
-      const updateQuery =
-        "UPDATE quotations SET quotation_number = ? WHERE id = ?";
-
-      db.query(
-        updateQuery,
-        [quotationNumber, quotationId],
-        (err, updateResult) => {
-          if (err) {
-            console.error("Error updating quotation number:", err);
-            return res
-              .status(500)
-              .send({ message: "Error updating quotation number" });
-          }
-
-          res.status(201).send({
-            message: "Quotation created successfully",
-            quotation_id: quotationId,
-            quotation_number: quotationNumber,
-          });
-        }
+    if (updatedResult && typeof updatedResult.seq === "number") {
+      return updatedResult.seq;
+    } else {
+      throw new Error(
+        `Failed to retrieve sequence for ${name}. Result is ${JSON.stringify(
+          updatedResult
+        )}`
       );
     }
-  );
+  } catch (error) {
+    console.error("Error in getNextSequence:", error);
+    throw error;
+  }
+};
+
+router.post("/create_quotation", async (req, res) => {
+  const { client_id, client_name, created_by } = req.body;
+
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("quotations");
+
+    // Generate the reference number
+    const nextSeq = await getNextSequence(db, "quotations");
+    const refNumber = `QT-${nextSeq}`;
+
+    const newQuotation = {
+      client_id,
+      client_name,
+      created_by,
+      ref_number: refNumber,
+      date_created: new Date(), // Or use getCurrentDateTimeUAE() if you have that function
+      status: "pending",
+      amount_paid: 0,
+      subtotal: 0,
+      pending_payment: 0,
+    };
+
+    const result = await collection.insertOne(newQuotation);
+
+    res.status(201).json({
+      message: "Quotation created successfully",
+      quotation_id: result.insertedId,
+      ref_number: refNumber,
+    });
+  } catch (err) {
+    console.error("Error inserting new quotation:", err);
+    res
+      .status(500)
+      .json({ message: "Error inserting new quotation", error: err.message });
+  }
 });
 
-router.get("/fetch_quotations", (req, res) => {
+router.get("/fetch_quotations", async (req, res) => {
   const { location, startDate, endDate } = req.query;
-  let query = "SELECT * FROM quotations WHERE 1=1";
-  const queryParams = [];
 
-  if (location) {
-    query += " AND location=?";
-    queryParams.push(location);
-  }
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("quotations");
 
-  if (startDate && endDate) {
-    const formattedStartDate = dayjs(startDate).format("YYYY-MM-DD");
-    const formattedEndDate = dayjs(endDate).format("YYYY-MM-DD");
-    query += " AND date_created BETWEEN ? AND ?";
-    queryParams.push(formattedStartDate, formattedEndDate);
-  } else if (startDate) {
-    const formattedStartDate = dayjs(startDate).format("YYYY-MM-DD");
-    query += " AND date_created >= ?";
-    queryParams.push(formattedStartDate);
-  } else if (endDate) {
-    const formattedEndDate = dayjs(endDate).format("YYYY-MM-DD");
-    query += " AND date_created <= ?";
-    queryParams.push(formattedEndDate);
-  }
-
-  db.query(query, queryParams, (err, results) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ message: "Database error", error: err });
+    // Build the query
+    const query = {};
+    if (location) {
+      query.client_name = location; // Assuming location is stored in client_name
     }
 
-    const quotationsWithDetails = results.map((quotation) => {
-      const dateCreated = dayjs
-        .utc(quotation.date_created)
-        .tz("Asia/Dubai")
-        .format("YYYY-MM-DD");
+    if (startDate || endDate) {
+      query.date_created = {};
+      if (startDate) {
+        query.date_created.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.date_created.$lte = new Date(endDate);
+      }
+    }
 
-      const pending_payment = Math.max(
+    // Fetch quotations from MongoDB
+    const quotations = await collection.find(query).toArray();
+
+    // Process and format the results
+    const quotationsWithDetails = quotations.map((quotation) => {
+      const dateCreated = dayjs(quotation.date_created).format("YYYY-MM-DD");
+      const pendingPayment = Math.max(
         0,
         quotation.subtotal - (quotation.amount_paid || 0)
       );
       const status =
-        pending_payment <= 0 && quotation.subtotal > 0
+        pendingPayment <= 0 && quotation.subtotal > 0
           ? "finished"
           : quotation.status;
 
       return {
         ...quotation,
         date_created: dateCreated,
-        pending_payment,
+        pending_payment: pendingPayment,
         status,
       };
     });
 
     res.status(200).json(quotationsWithDetails);
-  });
+  } catch (error) {
+    console.error("Error fetching quotations:", error);
+    res.status(500).json({ message: "Database error", error: error.message });
+  }
 });
 
-router.put("/cancel/:id", (req, res) => {
-  const { id } = req.params;
+router.put("/cancel/:ref_number", async (req, res) => {
+  const { ref_number } = req.params;
+
   try {
-    const query = "UPDATE quotations SET status = 'canceled' WHERE id=?";
-    db.query(query, [id], (err, results) => {
-      if (err) {
-        console.error("Error updating quotation status", err);
-        return res.status(500).json({ message: "Database Error", error: err });
-      }
-      if (results.affectedRows === 0) {
-        return res
-          .status(404)
-          .json({ message: `Quotation with ID: ${id} not found` });
-      }
-      return res
-        .status(200)
-        .json({ message: `Quotation with ID: ${id} canceled successfully` });
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("quotations");
+
+    const result = await collection.updateOne(
+      { ref_number: ref_number },
+      { $set: { status: "canceled" } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        message: `Quotation with ref_number: ${ref_number} not found`,
+      });
+    }
+
+    return res.status(200).json({
+      message: `Quotation with ref_number: ${ref_number} canceled successfully`,
     });
   } catch (error) {
-    console.error("Error canceling Order", error);
+    console.error("Error canceling quotation", error);
     return res
       .status(500)
       .json({ message: "Database error", error: error.message });
   }
 });
 
-router.post("/newitem", (req, res) => {
+router.post("/newitem", async (req, res) => {
   const { quotationId, item_name, item_description, price, quantity } =
     req.body;
-  console.log(item_name, item_description);
-
-  // Insert the new item into the order_items table
-  const insertItemQuery = `
-      INSERT INTO items (quotation_id, item_name, item_description, price, quantity)
-      VALUES (?, ?, ?, ?, ?)
-  `;
-  db.query(
-    insertItemQuery,
-    [quotationId, item_name, item_description, price, quantity],
-    (err, result) => {
-      if (err) {
-        console.error("Error inserting new item:", err);
-        return res.status(500).json({ message: "Failed to add new item" });
-      }
-
-      // Calculate the new subtotal
-      const calculateSubtotalQuery = `
-          SELECT SUM(total) AS subtotal FROM items WHERE quotation_id = ?
-      `;
-      db.query(calculateSubtotalQuery, [quotationId], (err, result) => {
-        if (err) {
-          console.error("Error calculating subtotal:", err);
-          return res
-            .status(500)
-            .json({ message: "Failed to calculate subtotal" });
-        }
-
-        const newSubtotal = result[0].subtotal;
-
-        // Update the order's subtotal
-        const updateOrderQuery = `
-              UPDATE quotations SET subtotal = ? WHERE id = ?
-          `;
-        db.query(
-          updateOrderQuery,
-          [newSubtotal, quotationId],
-          (err, result) => {
-            if (err) {
-              console.error("Error updating order subtotal:", err);
-              return res
-                .status(500)
-                .json({ message: "Failed to update order subtotal" });
-            }
-
-            return res.status(200).json({
-              message: "Item added and order subtotal updated successfully",
-            });
-          }
-        );
-      });
-    }
-  );
-});
-
-router.delete("/delete/:id", (req, res) => {
-  const { id } = req.params;
 
   try {
-    const paymentquery = "DELETE FROM items WHERE quotation_id=?";
-    db.query(paymentquery, [id], (err, results) => {
-      if (err) {
-        console.error("error deleting quotation", err);
-        return res.status(500).json({ message: "Database Error", error: err });
-      }
+    const db = getMongoDB();
+    const itemsCollection = db.collection("items");
+    const quotationsCollection = db.collection("quotations");
+
+    // Calculate total for the new item
+    const total = price * quantity;
+
+    // Insert the new item
+    await itemsCollection.insertOne({
+      quotation_id: quotationId,
+      item_name,
+      item_description,
+      price,
+      quantity,
+      total, // Add total to the item document
     });
 
-    const query = "DELETE FROM quotations WHERE id=?";
-    db.query(query, [id], (err, results) => {
-      if (err) {
-        console.error("Error deleting quotation", err);
-        return res.status(500).json({ message: "Database Error", error: err });
-      }
-      res
-        .status(200)
-        .json({ message: `Quotation with ID ${id} deleted successfully` });
+    // Calculate the new subtotal
+    const items = await itemsCollection
+      .find({ quotation_id: quotationId })
+      .toArray();
+
+    const newSubtotal = items.reduce((sum, item) => sum + item.total, 0);
+
+    // Update the order's subtotal
+    const result = await quotationsCollection.updateOne(
+      { ref_number: quotationId },
+      { $set: { subtotal: newSubtotal } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "Quotation not found" });
+    }
+
+    return res.status(200).json({
+      message: "Item added and order subtotal updated successfully",
+    });
+  } catch (err) {
+    console.error("Error processing request:", err);
+    return res
+      .status(500)
+      .json({ message: "Server Error", error: err.message });
+  }
+});
+
+router.delete("/delete/:ref_number", async (req, res) => {
+  const { ref_number } = req.params;
+
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("quotations");
+
+    // First, delete the items associated with the quotation
+    await db
+      .collection("items")
+      .deleteMany({ quotation_ref_number: ref_number });
+
+    // Then, delete the quotation
+    const result = await collection.deleteOne({ ref_number: ref_number });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        message: `Quotation with ref_number: ${ref_number} not found`,
+      });
+    }
+
+    return res.status(200).json({
+      message: `Quotation with ref_number: ${ref_number} deleted successfully`,
     });
   } catch (error) {
-    console.error("error deleting Quotation", error);
+    console.error("Error deleting quotation", error);
     return res
       .status(500)
       .json({ message: "Database Error", error: error.message });
   }
 });
 
-router.get("/fetch_items/:selectedQuotation", (req, res) => {
+router.get("/fetch_items/:selectedQuotation", async (req, res) => {
   const { selectedQuotation } = req.params;
-  try {
-    db.query(
-      "SELECT * FROM items WHERE quotation_id = ?",
-      [selectedQuotation],
-      (err, results) => {
-        if (err) {
-          console.error("Error fetching items:", err);
-          return res
-            .status(500)
-            .json({ message: "Database Error", error: err });
-        }
 
-        return res.status(200).json(results);
-      }
-    );
-  } catch (error) {
-    console.error("Error fetching items:", error);
-    return res.status(500).json({ message: "Server Error" }); // Adjust the error message as needed
+  try {
+    const db = getMongoDB();
+    const itemsCollection = db.collection("items");
+
+    // Fetch items by quotationId
+    const items = await itemsCollection
+      .find({ quotation_id: selectedQuotation })
+      .toArray();
+
+    // Return the items
+    res.status(200).json(items);
+  } catch (err) {
+    console.error("Error fetching items:", err);
+    res.status(500).json({ message: "Database Error", error: err.message });
   }
 });
 
-router.post("/add_payment", (req, res) => {
-  const { amount_payed, quotationId } = req.body;
+router.post("/add_payment", async (req, res) => {
+  const { amount_paid, ref_number } = req.body;
 
-  const updatePaymentQuery = `
-    UPDATE quotations
-    SET amount_paid = IFNULL(amount_paid, 0) + ?
-    WHERE id = ?;
-  `;
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("quotations");
 
-  db.query(updatePaymentQuery, [amount_payed, quotationId], (err, result) => {
-    if (err) {
-      console.error("Error updating payment:", err);
-      return res.status(500).json({ message: "Failed to update payment" });
+    // Fetch the current quotation
+    const quotation = await collection.findOne({ ref_number });
+
+    if (!quotation) {
+      return res.status(404).json({
+        message: `Quotation with ref_number: ${ref_number} not found`,
+      });
     }
 
-    if (result.affectedRows === 0) {
-      return res
-        .status(404)
-        .json({ message: `Quotation with ID: ${orderId} not found` });
-    }
+    // Calculate the new amount_paid
+    const newAmountPaid = (quotation.amount_paid || 0) + amount_paid;
+
+    // Update the quotation with the new amount_paid
+    await collection.updateOne(
+      { ref_number },
+      { $set: { amount_paid: newAmountPaid } }
+    );
+
+    // Calculate the pending payment
+    const pendingPayment = Math.max(
+      0,
+      (quotation.subtotal || 0) - newAmountPaid
+    );
+
+    // Update the quotation with the new pending_payment
+    await collection.updateOne(
+      { ref_number },
+      { $set: { pending_payment: pendingPayment } }
+    );
 
     return res.status(200).json({ message: "Payment added successfully" });
-  });
+  } catch (error) {
+    console.error("Error updating payment", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to update payment", error: error.message });
+  }
 });
 
 router.post(
   "/upload_receipt",
   uploadQuotationReceipts.single("file"),
-  (req, res) => {
+  async (req, res) => {
     const { quotationId } = req.body;
     const file = req.file;
 
@@ -288,86 +321,93 @@ router.post(
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Check if the file already exists
-    const checkFileQuery =
-      "SELECT * FROM quotation_files WHERE quotation_id = ? AND file_name = ?";
+    try {
+      const db = getMongoDB();
+      const fileCollection = db.collection("quotation_files");
 
-    db.query(
-      checkFileQuery,
-      [quotationId, file.originalname],
-      (err, results) => {
-        if (err) {
-          console.error("Error checking for existing file:", err);
-          return res.status(500).json({ message: "Database error" });
-        }
+      // Generate a ref_number for the file using the sequence generator
+      const file_ref_number = await getNextSequence(db, "q_files");
 
-        if (results.length > 0) {
-          return res.status(400).json({ message: "File already exists" });
-        }
+      // Check if the file already exists
+      const existingFile = await fileCollection.findOne({
+        quotation_id: quotationId,
+        file_name: file.originalname,
+      });
 
-        // File does not exist, proceed with insertion
-        const insertQuery =
-          "INSERT INTO quotation_files(quotation_id, file_name, file_url) VALUES(?, ?, ?)";
-
-        db.query(
-          insertQuery,
-          [quotationId, file.originalname, file.path],
-          (err, results) => {
-            if (err) {
-              console.error("Error uploading file:", err);
-              return res.status(500).json({ message: "Database Error" });
-            }
-            return res.status(200).json({
-              message: `Receipt Uploaded Successfully for quotation ${quotationId}`,
-            });
-          }
-        );
+      if (existingFile) {
+        return res.status(400).json({ message: "File already exists" });
       }
-    );
+
+      // File does not exist, proceed with insertion
+      await fileCollection.insertOne({
+        ref_number: file_ref_number, // Store generated ref_number with the file
+        quotation_id: quotationId,
+        file_name: file.originalname,
+        file_url: file.path, // Ensure this path is accessible by your application
+      });
+
+      return res.status(200).json({
+        message: `Receipt Uploaded Successfully for quotation ${quotationId} with ref_number ${file_ref_number}`,
+      });
+    } catch (err) {
+      console.error("Error uploading file:", err);
+      return res
+        .status(500)
+        .json({ message: "Database Error", error: err.message });
+    }
   }
 );
-
-router.get("/fetch_files/:quotationId", (req, res) => {
+router.get("/fetch_files/:quotationId", async (req, res) => {
   const { quotationId } = req.params;
 
-  const query = "SELECT * FROM quotation_files WHERE quotation_id = ?";
+  try {
+    const db = getMongoDB();
+    const fileCollection = db.collection("quotation_files");
 
-  db.query(query, [quotationId], (err, results) => {
-    if (err) {
-      console.error("Error fetching files:", err);
-      return res.status(500).json({ message: "Database Error" });
-    }
+    // Fetch files by quotationId
+    const files = await fileCollection
+      .find({ quotation_id: quotationId })
+      .toArray();
 
-    res.status(200).json({ files: results });
-  });
+    // Send a successful response with an empty list if no files are found
+    res.status(200).json({ files });
+  } catch (err) {
+    console.error("Error fetching files:", err);
+    return res
+      .status(500)
+      .json({ message: "Database Error", error: err.message });
+  }
 });
-
-router.delete("/delete_files/:id/:file_url", (req, res) => {
-  const { id } = req.params;
+router.delete("/delete_files/:file_name/:file_url", async (req, res) => {
+  const { file_name } = req.params;
   const file_url = decodeURIComponent(req.params.file_url);
   const filePath = file_url;
 
-  const query = "DELETE FROM quotation_files WHERE id=?";
   try {
-    db.query(query, [id], (err, result) => {
+    const db = getMongoDB();
+    const fileCollection = db.collection("quotation_files");
+
+    // Find and delete the file from the database using file_name
+    const result = await fileCollection.deleteOne({ file_name: file_name });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Delete the file from the filesystem
+    fs.unlink(filePath, (err) => {
       if (err) {
-        console.error("couldn't delete file from database", err);
-        return res.status(500).json({ message: "database error" });
+        console.error("Couldn't delete file from filesystem", err);
+        return res.status(500).json({ message: "File system error" });
       }
 
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error("couldn't delete file from filesystem", err);
-          return res.status(500).json({ message: "file system error" });
-        }
-        return res.status(200).json({
-          message: `File with id: ${id} successfully deleted`,
-        });
+      return res.status(200).json({
+        message: `File with file_name: ${file_name} successfully deleted`,
       });
     });
   } catch (error) {
-    console.error("couldn't delete file", error);
-    return res.status(500).json({ message: "database error" });
+    console.error("Couldn't delete file", error);
+    return res.status(500).json({ message: "Database error" });
   }
 });
 

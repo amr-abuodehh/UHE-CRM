@@ -36,7 +36,7 @@ export default function CreateTask({ selectedTask, setUpdateMode }) {
             let endpoint = '/api/tasks/create';
             let method = 'POST';
             if (selectedTask) {
-                endpoint = `/api/tasks/update/${selectedTask.id}`;
+                endpoint = `/api/tasks/update/${selectedTask.ref_number}`;
                 method = "PUT";
             }
 

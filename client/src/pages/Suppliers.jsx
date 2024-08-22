@@ -94,7 +94,7 @@ export default function Suppliers() {
     //Show Supplier Details
 
     const addOrder = useCallback(async (supplier) => {
-        const { name, id, created_by } = supplier;
+        const { name, ref_number, created_by } = supplier;
         try {
             const response = await fetch("/api/orders/new_order", {
                 method: "POST",
@@ -103,7 +103,7 @@ export default function Suppliers() {
                     'Authorization': `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
-                    supplier_id: id,
+                    supplier_id: ref_number,
                     supplier_name: name,
                     created_by: created_by,
                 })
@@ -138,7 +138,7 @@ export default function Suppliers() {
             <div className={styles.actionsContainer}>
 
 
-                <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteSuppliers(row.original.id)}>Delete</button>
+                <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteSuppliers(row.original.ref_number)}>Delete</button>
 
                 <button className={`${styles.actionButton} ${styles.update}`} onClick={() => updateSuppliers(row.original)}>Update</button>
 

@@ -11,6 +11,7 @@ const tasksRoute = require("./routes/handleTasks");
 const hrRoute = require("./routes/handleHr");
 const OrderRoute = require("./routes/handleOrders");
 const homeRoute = require("./routes/handleHome");
+const { connectToMongoDB } = require("./db");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 const jwt = require("jsonwebtoken");
@@ -24,6 +25,7 @@ app.use(cookieParser());
 
 app.use(express.json());
 app.use(cors());
+connectToMongoDB();
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/suppliers", authenticateToken, suppliersRoute);

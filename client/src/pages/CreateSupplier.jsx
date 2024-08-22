@@ -21,7 +21,7 @@ export default function CreateSupplier({ selectedSupplier, setUpdateMode }) {
             let endpoint = '/api/suppliers/create';
             let method = 'POST';
             if (selectedSupplier) {
-                endpoint = `/api/suppliers/update/${selectedSupplier.id}`;
+                endpoint = `/api/suppliers/update/${selectedSupplier.ref_number}`;
                 method = "PUT";
             }
 

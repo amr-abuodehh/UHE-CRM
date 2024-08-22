@@ -22,6 +22,7 @@ export default function Clients() {
         endDate: "",
     });
 
+
     const fetchClients = useCallback(async () => {
         try {
             const { location, startDate, endDate } = filters;
@@ -52,6 +53,7 @@ export default function Clients() {
 
             const data = await response.json();
             setClients(data);
+            console.log(data)
         } catch (error) {
             console.error("Error fetching clients", error);
         }
@@ -89,8 +91,8 @@ export default function Clients() {
 
 
     const addQuatation = useCallback(async (client) => {
-        const { name, id, created_by } = client;
-        console.log(name, id)
+        const { name, ref_number, created_by } = client;
+
         try {
             const response = await fetch("/api/quotations/create_quotation", {
                 method: 'POST',
@@ -99,7 +101,7 @@ export default function Clients() {
                     'Authorization': `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
-                    client_id: id,
+                    client_id: ref_number,
                     client_name: name,
                     created_by: created_by,
                 })
@@ -131,7 +133,7 @@ export default function Clients() {
         Header: 'Actions',
         Cell: ({ row }) => (
             <div className={styles.actionsContainer}>
-                <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteClient(row.original.id)}>Delete</button>
+                <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteClient(row.original.ref_number)}>Delete</button>
                 <button className={`${styles.actionButton} ${styles.update}`} onClick={() => updateClient(row.original)}>Update</button>
                 <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => addQuatation(row.original)}>Add Quatation</button>
 

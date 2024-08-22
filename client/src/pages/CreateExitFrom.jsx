@@ -21,7 +21,7 @@ export default function CreateExitFrom({ selectedForm, setUpdateMode }) {
             let endpoint = '/api/hr/create';
             let method = 'POST';
             if (selectedForm) {
-                endpoint = `/api/hr/update/${selectedForm.id}`;
+                endpoint = `/api/hr/update/${selectedForm.ref_number}`;
                 method = "PUT";
             }
 

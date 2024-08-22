@@ -23,7 +23,7 @@ export default function Orders() {
     const [showFiles, setShowFiles] = useState(false);
     const [paymentModal, setPaymentModal] = useState(false);
     const [selectedQuotation, setSelectedQuotation] = useState("")
-    const [paymentFormData, setPaymentFormData] = useState({ amount_payed: '' });
+    const [paymentFormData, setPaymentFormData] = useState({ amount_paid: '' });
     const [quotations, setQuotations] = useState([]);
     const [filters, setFilters] = useState({
         globalFilter: "",
@@ -126,13 +126,18 @@ export default function Orders() {
     const handlePaymentSubmit = useCallback(async (e) => {
         e.preventDefault();
         try {
+            const { amount_paid } = paymentFormData;
+
             const response = await fetch(`/api/quotations/add_payment`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`
                 },
-                body: JSON.stringify({ quotationId: selectedQuotation, ...paymentFormData })
+                body: JSON.stringify({
+                    ref_number: selectedQuotation,
+                    amount_paid: Number(amount_paid), // Convert to number
+                })
             });
 
             if (!response.ok) {
@@ -182,16 +187,16 @@ export default function Orders() {
             <div className={styles.actionsContainer}>
                 {row.original.status !== 'canceled' && (
                     <>
-                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => cancelQuotation(row.original.id)}>Cancel</button>
-                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addNewItem(row.original.id)}>Add New Item</button>
-                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addPayment(row.original.id)}>Add Payment</button>
-                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewReceipt(row.original.id)}>View Receipt</button>
-                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewFiles(row.original.id)}>Upload Files</button>
+                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => cancelQuotation(row.original.ref_number)}>Cancel</button>
+                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addNewItem(row.original.ref_number)}>Add New Item</button>
+                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => addPayment(row.original.ref_number)}>Add Payment</button>
+                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewReceipt(row.original.ref_number)}>View Receipt</button>
+                        <button className={`${styles.actionButton} ${styles.payment}`} onClick={() => viewFiles(row.original.ref_number)}>Upload Files</button>
                     </>
                 )}
                 {row.original.status === 'canceled' && (
                     <>
-                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteQuotation(row.original.id)}>Delete</button>
+                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteQuotation(row.original.ref_number)}>Delete</button>
                     </>
                 )}
 

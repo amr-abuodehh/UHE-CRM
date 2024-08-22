@@ -1,7 +1,7 @@
 export const leaveFormColumns = [
   {
-    Header: "Id",
-    accessor: "id",
+    Header: "Ref Number",
+    accessor: "ref_number",
   },
   {
     Header: "Name",

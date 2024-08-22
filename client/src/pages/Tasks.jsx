@@ -97,7 +97,7 @@ export default function Clients() {
                     {user.privilege === 'admin' || user.privilege === 'manager' ? (
                         <button
                             className={`${styles.actionButton} ${styles.delete}`}
-                            onClick={() => deleteTask(row.original.id)}
+                            onClick={() => deleteTask(row.original.ref_number)}
                         >
                             Delete
                         </button>

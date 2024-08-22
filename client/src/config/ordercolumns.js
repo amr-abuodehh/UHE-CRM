@@ -1,7 +1,7 @@
 export const orderColumns = [
   {
     Header: "Order Number",
-    accessor: "order_number",
+    accessor: "ref_number",
   },
   {
     Header: "Supplier Name",
@@ -9,7 +9,7 @@ export const orderColumns = [
   },
   {
     Header: "Amount Paid",
-    accessor: "amount_payed",
+    accessor: "amount_paid",
   },
   {
     Header: "Subtotal",

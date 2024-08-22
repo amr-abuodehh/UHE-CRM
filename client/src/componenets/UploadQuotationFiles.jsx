@@ -18,10 +18,19 @@ const UploadQuotationFiles = ({ isOpen, onClose, quotationId }) => {
                 });
 
                 if (!response.ok) {
+                    // Handle non-OK responses (e.g., server errors)
                     throw new Error('Network response was not ok');
                 }
 
                 const data = await response.json();
+
+                // If no files are returned, you can handle it here if needed
+                if (!data.files || data.files.length === 0) {
+
+                    setUploadedFiles([]); // Ensure state is set to an empty array
+                    return;
+                }
+
                 setUploadedFiles(data.files);
             } catch (error) {
                 console.error('Error fetching files:', error);

@@ -21,7 +21,7 @@ export default function CreateLeaveFrom({ selectedForm, setUpdateMode }) {
             let endpoint = '/api/hr/create_leave';
             let method = 'POST';
             if (selectedForm) {
-                endpoint = `/api/hr/update_leave/${selectedForm.id}`;
+                endpoint = `/api/hr/update_leave/${selectedForm.ref_number}`;
                 method = "PUT";
             }
 

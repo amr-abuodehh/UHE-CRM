@@ -3,8 +3,9 @@ const db = require("../db");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const timezone = require("dayjs/plugin/timezone");
-
+const { getMongoDB } = require("../db");
 dayjs.extend(utc);
+
 dayjs.extend(timezone);
 
 const router = express.Router();
@@ -12,69 +13,109 @@ const router = express.Router();
 function getCurrentDateTimeUAE() {
   return dayjs().tz("Asia/Dubai").format("YYYY-MM-DD HH:mm:ss");
 }
+const getNextSequence = async (db, name) => {
+  try {
+    let result = await db.collection("sequences").findOne({ _id: name });
 
-router.post("/create", (req, res) => {
+    if (!result) {
+      await db.collection("sequences").insertOne({ _id: name, seq: 1 });
+      result = await db.collection("sequences").findOne({ _id: name });
+    }
+    await db
+      .collection("sequences")
+      .updateOne({ _id: name }, { $inc: { seq: 1 } });
+    const updatedResult = await db
+      .collection("sequences")
+      .findOne({ _id: name });
+
+    if (updatedResult && typeof updatedResult.seq === "number") {
+      return updatedResult.seq;
+    } else {
+      throw new Error(
+        `Failed to retrieve sequence for ${name}. Result is ${JSON.stringify(
+          updatedResult
+        )}`
+      );
+    }
+  } catch (error) {
+    console.error("Error in getNextSequence:", error);
+    throw error;
+  }
+};
+
+router.post("/create", async (req, res) => {
   const { name, company, website, email, phone, location } = req.body;
   const currentDate = getCurrentDateTimeUAE();
   const username = req.headers["username"];
-  query =
-    "INSERT INTO clients(name,company,website,email,phone,location,date_created,created_by) VALUES (?,?,?,?,?,?,?,?)";
-  values = [
-    name,
-    company,
-    website,
-    email,
-    phone,
-    location,
-    currentDate,
-    username,
-  ];
 
-  db.query(query, values, (err, results) => {
-    if (err) {
-      console.error("error executing query", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
-    return res.status(201).json({ message: "successfully added client" });
-  });
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("clients");
+
+    // Generate the reference number
+    const nextSeq = await getNextSequence(db, "clients");
+    const refNumber = `cl-${nextSeq}`;
+
+    const mongoDocument = {
+      ref_number: refNumber,
+      name,
+      company,
+      website,
+      email,
+      phone,
+      location,
+      date_created: currentDate,
+      created_by: username,
+    };
+
+    await collection.insertOne(mongoDocument);
+
+    return res
+      .status(201)
+      .json({ message: "Successfully added client to MongoDB" });
+  } catch (err) {
+    console.error("Error processing request", err);
+    return res
+      .status(500)
+      .json({ message: "Error processing request", error: err.message });
+  }
 });
 
-router.get("/fetch", (req, res) => {
+router.get("/fetch", async (req, res) => {
   const { location, startDate, endDate } = req.query;
-  let query = "SELECT * FROM clients WHERE 1=1";
-  const queryParams = [];
+
+  const query = {};
+  const options = {};
 
   if (location) {
-    query += " AND location=?";
-    queryParams.push(location);
+    query.location = location;
   }
 
   if (startDate && endDate) {
-    const formattedStartDate = dayjs(startDate).format("YYYY-MM-DD");
-    const formattedEndDate = dayjs(endDate).format("YYYY-MM-DD");
-    query += " AND date_created BETWEEN ? AND ?";
-    queryParams.push(formattedStartDate, formattedEndDate);
+    const formattedStartDate = dayjs(startDate).startOf("day").toDate();
+    const formattedEndDate = dayjs(endDate).endOf("day").toDate();
+    query.date_created = {
+      $gte: formattedStartDate,
+      $lte: formattedEndDate,
+    };
   } else if (startDate) {
-    const formattedStartDate = dayjs(startDate).format("YYYY-MM-DD");
-    query += " AND date_created >= ?";
-    queryParams.push(formattedStartDate);
+    const formattedStartDate = dayjs(startDate).startOf("day").toDate();
+    query.date_created = { $gte: formattedStartDate };
   } else if (endDate) {
-    const formattedEndDate = dayjs(endDate).format("YYYY-MM-DD");
-    query += " AND date_created <= ?";
-    queryParams.push(formattedEndDate);
+    const formattedEndDate = dayjs(endDate).endOf("day").toDate();
+    query.date_created = { $lte: formattedEndDate };
   }
 
-  db.query(query, queryParams, (err, results) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("clients"); // Adjust collection name as needed
+    const results = await collection.find(query).toArray();
 
     const convertedResults = results.map((client) => {
-      const dateCreated = dayjs
-        .utc(client.date_created)
+      const dateCreated = dayjs(client.date_created)
+        .utc()
         .tz("Asia/Dubai")
-        .format("YYYY-MM-DD ");
+        .format("YYYY-MM-DD");
       return {
         ...client,
         date_created: dateCreated,
@@ -82,123 +123,119 @@ router.get("/fetch", (req, res) => {
     });
 
     res.status(200).json(convertedResults);
-  });
+  } catch (err) {
+    console.error("Error fetching data from MongoDB:", err);
+    res.status(500).json({ message: "Database error", error: err });
+  }
 });
-
-router.delete("/delete/:id", (req, res) => {
-  const { id } = req.params;
+router.delete("/delete/:ref_number", async (req, res) => {
+  const { ref_number } = req.params;
 
   try {
-    // First, fetch the orders related to the supplier
-    const fetchQuotationsQuery = "SELECT id FROM quotations WHERE client_id=?";
-    db.query(fetchQuotationsQuery, [id], (err, quotations) => {
-      if (err) {
-        console.error("Error fetching quotations", err);
-        return res.status(500).json({ message: "Database Error", error: err });
-      }
+    const db = getMongoDB(); // Get MongoDB instance
 
-      const quotationIds = quotations.map((quotation) => quotation.id);
+    // Get collections
+    const clientsCollection = db.collection("clients");
+    const quotationsCollection = db.collection("quotations");
+    const itemsCollection = db.collection("items");
 
-      // Next, delete order items for each order
-      if (quotationIds.length > 0) {
-        const deleteQuotationItemsQuery =
-          "DELETE FROM items WHERE quotation_id IN (?)";
-        db.query(
-          deleteQuotationItemsQuery,
-          [quotationIds],
-          (err, quotationItemsResult) => {
-            if (err) {
-              console.error("Error deleting quotation items", err);
-              return res
-                .status(500)
-                .json({ message: "Database Error", error: err });
-            }
+    // Fetch the client's quotations
+    const quotations = await quotationsCollection
+      .find({ client_ref_number: ref_number })
+      .toArray();
+    const quotationIds = quotations.map((quotation) => quotation.ref_number);
 
-            // Now delete the orders
-            const deleteQuotationQuery =
-              "DELETE FROM quotations WHERE client_id=?";
-            db.query(deleteQuotationQuery, [id], (err, quotationResults) => {
-              if (err) {
-                console.error("Error deleting quotation", err);
-                return res
-                  .status(500)
-                  .json({ message: "Database Error", error: err });
-              }
+    // Delete items for each quotation
+    if (quotationIds.length > 0) {
+      await itemsCollection.deleteMany({
+        quotation_ref_number: { $in: quotationIds },
+      });
 
-              // Finally, delete the supplier
-              const deleteClientQuery = "DELETE FROM clients WHERE id=?";
-              db.query(deleteClientQuery, [id], (err, clientResults) => {
-                if (err) {
-                  console.error("Error deleting client", err);
-                  return res
-                    .status(500)
-                    .json({ message: "Database Error", error: err });
-                }
+      // Delete the quotations
+      await quotationsCollection.deleteMany({ client_ref_number: ref_number });
+    }
 
-                return res.status(200).json({
-                  message: `Client with ID ${id} deleted successfully`,
-                });
-              });
-            });
-          }
-        );
-      } else {
-        // If no orders are found, delete the supplier directly
-        const deleteClientQuery = "DELETE FROM clients WHERE id=?";
-        db.query(deleteClientQuery, [id], (err, clientResults) => {
-          if (err) {
-            console.error("Error deleting client", err);
-            return res
-              .status(500)
-              .json({ message: "Database Error", error: err });
-          }
+    // Finally, delete the client
+    const deleteResult = await clientsCollection.deleteOne({
+      ref_number: ref_number,
+    });
 
-          return res
-            .status(200)
-            .json({ message: `Client with ID ${id} deleted successfully` });
-        });
-      }
+    if (deleteResult.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: `Client with ref_number ${ref_number} not found` });
+    }
+
+    return res.status(200).json({
+      message: `Client with ref_number ${ref_number} deleted successfully`,
     });
   } catch (error) {
-    console.error("Error deleting client", error);
+    console.error("Error deleting client:", error);
     return res
       .status(500)
       .json({ message: "Database Error", error: error.message });
   }
 });
 
-router.put("/update/:id", (req, res) => {
+router.put("/update/:ref_number", async (req, res) => {
   const { name, company, website, email, phone, location } = req.body;
-  const { id } = req.params;
-  const query =
-    "UPDATE clients SET name=?, company=?, website=?, email=?, phone=?, location=? WHERE id=?";
-  const values = [name, company, website, email, phone, location, id];
+  const { ref_number } = req.params;
+
   try {
-    db.query(query, values, (err, results) => {
-      if (err) {
-        console.error("error updating supplier", err);
-        return res.status(500).json({ message: "database error", error: err });
+    const db = getMongoDB(); // Get MongoDB instance
+    const collection = db.collection("clients");
+
+    const updateResult = await collection.updateOne(
+      { ref_number: ref_number }, // Filter by ref_number
+      {
+        $set: {
+          name,
+          company,
+          website,
+          email,
+          phone,
+          location,
+        },
       }
+    );
+
+    if (updateResult.matchedCount === 0) {
       return res
-        .status(200)
-        .json({ message: `Supplier with ID:${id} Successfully Updated` });
+        .status(404)
+        .json({ message: `Client with ref_number:${ref_number} not found` });
+    }
+
+    return res.status(200).json({
+      message: `Client with ref_number:${ref_number} successfully updated`,
     });
   } catch (error) {
-    console.error("error updating supplier", error);
-    return res.status(500).json({ message: "Database Error", error });
+    console.error("Error updating client:", error);
+    return res
+      .status(500)
+      .json({ message: "Database error", error: error.message });
   }
 });
 
-router.get("/fetch_client_names", (req, res) => {
-  const query = "SELECT name FROM clients";
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error("error fetching clients:", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
-    const clients = results.map((row) => row.name);
-    return res.status(200).json(clients);
-  });
+router.get("/fetch_client_names", async (req, res) => {
+  try {
+    const db = getMongoDB(); // Get MongoDB instance
+    const clientsCollection = db.collection("clients");
+
+    // Fetch all client names
+    const clients = await clientsCollection
+      .find({}, { projection: { _id: 0, name: 1 } })
+      .toArray();
+
+    // Extract names from the result
+    const clientNames = clients.map((client) => client.name);
+
+    return res.status(200).json(clientNames);
+  } catch (error) {
+    console.error("Error fetching client names:", error);
+    return res
+      .status(500)
+      .json({ message: "Database error", error: error.message });
+  }
 });
 
 module.exports = router;
