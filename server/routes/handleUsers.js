@@ -43,7 +43,6 @@ const getNextSequence = async (db, name) => {
 
 router.post("/token", (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-
   if (!refreshToken) return res.sendStatus(401);
 
   jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, decoded) => {
