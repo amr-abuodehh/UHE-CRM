@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/static/css/main.38f0274e.css",
-    "main.js": "/static/js/main.0e8e6473.js",
+    "main.css": "/static/css/main.6f554391.css",
+    "main.js": "/static/js/main.31e1c500.js",
     "static/media/background1.png": "/static/media/background1.e8a27125881b210a472e.png",
     "static/media/Background.png": "/static/media/Background.b5fe7ae4eea8ae4a912b.png",
     "static/media/uhe_logo.png": "/static/media/uhe_logo.95d640ec591ca5e2cfd9.png",
     "static/media/logo.png": "/static/media/logo.45ae855b525455906d84.png",
     "index.html": "/index.html",
-    "main.38f0274e.css.map": "/static/css/main.38f0274e.css.map",
-    "main.0e8e6473.js.map": "/static/js/main.0e8e6473.js.map"
+    "main.6f554391.css.map": "/static/css/main.6f554391.css.map",
+    "main.31e1c500.js.map": "/static/js/main.31e1c500.js.map"
   },
   "entrypoints": [
-    "static/css/main.38f0274e.css",
-    "static/js/main.0e8e6473.js"
+    "static/css/main.6f554391.css",
+    "static/js/main.31e1c500.js"
   ]
 }
