@@ -8,6 +8,8 @@ import CreateLeaveFrom from './CreateLeaveForm';
 import Pagination from '../componenets/Pagination';
 import { useAuth } from '../AuthContext';
 import { toast } from 'react-toastify';
+import UploadModal from '../componenets/UploadModal';
+import UploadLeaveForm from '../componenets/UploadLeaveForm';
 
 
 export default function LeaveForms() {
@@ -22,11 +24,12 @@ export default function LeaveForms() {
     });
     const [updateMode, setUpdateMode] = useState(false);
     const [selectedForm, setSelectedForm] = useState([]);
-
+    const [showFiles, setShowFiles] = useState(false);
 
     //fetch Suppliers and pass Filters
 
     const fetchLeaveForms = useCallback(async () => {
+        if (!user) return;
         try {
             const { location, startDate, endDate } = filters;
             let url = '/api/hr/fetch_leave';
@@ -47,6 +50,7 @@ export default function LeaveForms() {
             const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
+                    'User': JSON.stringify(user)
                 },
             });
             if (!response.ok) {
@@ -58,7 +62,7 @@ export default function LeaveForms() {
         } catch (error) {
             console.error('Error fetching forms:', error);
         }
-    }, [filters, accessToken]);
+    }, [filters, accessToken, user]);
 
     //Supplier table Action buttons
 
@@ -89,6 +93,10 @@ export default function LeaveForms() {
         setUpdateMode(true);
         setSelectedForm(updateinfo);
     }, []);
+    const viewFiles = useCallback((id) => {
+        setSelectedForm(id);
+        setShowFiles(true);
+    }, [])
 
     //USE EFFECT To render Table
 
@@ -105,14 +113,44 @@ export default function LeaveForms() {
                 Header: 'Actions',
                 Cell: ({ row }) => (
                     <div className={styles.actionsContainer}>
-                        <button className={`${styles.actionButton} ${styles.delete}`} onClick={() => deleteForm(row.original.ref_number)}>Delete</button>
-                        <button className={`${styles.actionButton} ${styles.update}`} onClick={() => updateForm(row.original)}>Update</button>
+                        <button
+                            className={`${styles.actionButton} ${styles.delete}`}
+                            onClick={() => deleteForm(row.original.ref_number)}
+                        >
+                            Delete
+                        </button>
+                        <button
+                            className={`${styles.actionButton} ${styles.update}`}
+                            onClick={() => updateForm(row.original)}
+                        >
+                            Update
+                        </button>
+                        <button
+                            className={`${styles.actionButton} ${styles.payment}`}
+                            onClick={() => viewFiles(row.original.ref_number)}
+                        >
+                            Upload Files
+                        </button>
+                    </div>
+                )
+            });
+        } else if (user && (user.privilege === 'user' || user.privilege === 'sales')) {
+            cols.push({
+                Header: 'Actions',
+                Cell: ({ row }) => (
+                    <div className={styles.actionsContainer}>
+                        <button
+                            className={`${styles.actionButton} ${styles.payment}`}
+                            onClick={() => viewFiles(row.original.ref_number)}
+                        >
+                            Upload Files
+                        </button>
                     </div>
                 )
             });
         }
         return cols;
-    }, [deleteForm, updateForm, user]);
+    }, [deleteForm, updateForm, user, viewFiles]);
 
     //Data Defention for Table
 
@@ -143,6 +181,11 @@ export default function LeaveForms() {
                 <Pagination tableInstance={tableInstance} />
 
             </div>
+            {
+                showFiles && (
+                    <UploadLeaveForm isOpen={UploadModal} onClose={() => setShowFiles(false)} formId={selectedForm} />
+                )
+            }
         </div>
     );
 }

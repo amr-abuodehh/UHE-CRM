@@ -40,16 +40,21 @@ function BasicExample() {
                                 <NavDropdown.Item href="/create_task">Create New Task</NavDropdown.Item>
                             )}
                         </NavDropdown>
-                        <NavDropdown title={<><FaUsers className={styles.navIcon} /> Suppliers</>} id="basic-nav-dropdown" className={styles.navLink}>
-                            <NavDropdown.Item href="/Suppliers">View Suppliers</NavDropdown.Item>
-                            <NavDropdown.Item href="/orders">View Orders</NavDropdown.Item>
-                            <NavDropdown.Item href="/Create_supplier">Create New Supplier</NavDropdown.Item>
-                        </NavDropdown>
-                        <NavDropdown title={<><FaUser className={styles.navIcon} /> Clients</>} id="basic-nav-dropdown" className={styles.navLink}>
-                            <NavDropdown.Item href="/clients">View Clients</NavDropdown.Item>
-                            <NavDropdown.Item href="/quotations">View Quotations</NavDropdown.Item>
-                            <NavDropdown.Item href="/create_clients">Create New Client</NavDropdown.Item>
-                        </NavDropdown>
+                        {(user?.privilege === 'admin' || user?.privilege === 'manager') && (
+                            <NavDropdown title={<><FaUsers className={styles.navIcon} /> Suppliers</>} id="basic-nav-dropdown" className={styles.navLink}>
+                                <NavDropdown.Item href="/Suppliers">View Suppliers</NavDropdown.Item>
+                                <NavDropdown.Item href="/orders">View Orders</NavDropdown.Item>
+                                <NavDropdown.Item href="/Create_supplier">Create New Supplier</NavDropdown.Item>
+                            </NavDropdown>
+
+                        )}
+                        {(user?.privilege === 'admin' || user?.privilege === 'manager') && (
+                            <NavDropdown title={<><FaUser className={styles.navIcon} /> Clients</>} id="basic-nav-dropdown" className={styles.navLink}>
+                                <NavDropdown.Item href="/clients">View Clients</NavDropdown.Item>
+                                <NavDropdown.Item href="/quotations">View Quotations</NavDropdown.Item>
+                                <NavDropdown.Item href="/create_clients">Create New Client</NavDropdown.Item>
+                            </NavDropdown>)}
+
                         <NavDropdown title={<><FaUserTie className={styles.navIcon} /> HR</>} id="basic-nav-dropdown" >
                             <NavDropdown.Item href="/exit_forms">Exit Forms</NavDropdown.Item>
                             <NavDropdown.Item href="/leave_forms">Leave Forms</NavDropdown.Item>

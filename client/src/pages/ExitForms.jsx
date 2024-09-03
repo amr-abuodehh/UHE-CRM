@@ -27,6 +27,7 @@ export default function ExitForms() {
     //fetch Suppliers and pass Filters
 
     const fetchExitForms = useCallback(async () => {
+        if (!user) return;
         try {
             const { location, startDate, endDate } = filters;
             let url = '/api/hr/fetch';
@@ -47,6 +48,7 @@ export default function ExitForms() {
             const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
+                    'User': JSON.stringify(user)
                 },
             });
             if (!response.ok) {
@@ -58,7 +60,7 @@ export default function ExitForms() {
         } catch (error) {
             console.error('Error fetching forms:', error);
         }
-    }, [filters, accessToken]);
+    }, [filters, accessToken, user]);
 
     //Supplier table Action buttons
 
