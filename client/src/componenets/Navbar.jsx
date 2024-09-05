@@ -40,7 +40,7 @@ function BasicExample() {
                                 <NavDropdown.Item href="/create_task">Create New Task</NavDropdown.Item>
                             )}
                         </NavDropdown>
-                        {(user?.privilege === 'admin' || user?.privilege === 'manager') && (
+                        {(user?.privilege === 'admin' || user?.privilege === 'manager' || user?.privilege === 'sales') && (
                             <NavDropdown title={<><FaUsers className={styles.navIcon} /> Suppliers</>} id="basic-nav-dropdown" className={styles.navLink}>
                                 <NavDropdown.Item href="/Suppliers">View Suppliers</NavDropdown.Item>
                                 <NavDropdown.Item href="/orders">View Orders</NavDropdown.Item>
@@ -48,7 +48,7 @@ function BasicExample() {
                             </NavDropdown>
 
                         )}
-                        {(user?.privilege === 'admin' || user?.privilege === 'manager') && (
+                        {(user?.privilege === 'admin' || user?.privilege === 'manager' || user?.privilege === 'sales') && (
                             <NavDropdown title={<><FaUser className={styles.navIcon} /> Clients</>} id="basic-nav-dropdown" className={styles.navLink}>
                                 <NavDropdown.Item href="/clients">View Clients</NavDropdown.Item>
                                 <NavDropdown.Item href="/quotations">View Quotations</NavDropdown.Item>
